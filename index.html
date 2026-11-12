@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WorldBox - God Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+  font-family: 'Inter', sans-serif; 
+  background: #1a1a2e; 
+  overflow: hidden; 
+  user-select: none;
+  cursor: crosshair;
+}
+canvas { display: block; }
+
+/* Top Bar */
+#topBar {
+  position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; z-index: 100;
+  background: rgba(20, 20, 40, 0.9);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 6px 12px;
+  align-items: center;
+}
+#topBar button {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ccc; font-family: 'Inter', sans-serif;
+  font-size: 11px; padding: 5px 10px;
+  border-radius: 5px; cursor: pointer;
+  transition: all 0.2s;
+}
+#topBar button:hover { background: rgba(255,255,255,0.15); color: #fff; }
+#topBar button.active { background: rgba(100,150,255,0.3); border-color: rgba(100,150,255,0.5); color: #fff; }
+
+/* Side Toolbar */
+#toolbar {
+  position: fixed; left: 10px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 4px;
+  background: rgba(20, 20, 40, 0.92);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 8px; z-index: 100;
+  max-height: 80vh; overflow-y: auto;
+}
+#toolbar::-webkit-scrollbar { width: 4px; }
+#toolbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+.tool-section { margin-bottom: 4px; }
+.tool-section-title {
+  color: rgba(255,255,255,0.4); font-size: 9px;
+  text-transform: uppercase; letter-spacing: 1px;
+  padding: 4px 6px 2px; font-weight: 600;
+}
+.tool-btn {
+  width: 44px; height: 44px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 7px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; transition: all 0.15s;
+  position: relative;
+}
+.tool-btn:hover { 
+  background: rgba(255,255,255,0.12); 
+  border-color: rgba(255,255,255,0.2);
+  transform: scale(1.05);
+}
+.tool-btn.active { 
+  background: rgba(100,150,255,0.25); 
+  border-color: rgba(100,150,255,0.5);
+  box-shadow: 0 0 10px rgba(100,150,255,0.2);
+}
+.tool-btn .tooltip {
+  display: none; position: absolute; left: 52px; top: 50%;
+  transform: translateY(-50%); background: rgba(10,10,30,0.95);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #ddd; padding: 4px 8px; border-radius: 5px;
+  font-size: 11px; white-space: nowrap; pointer-events: none; z-index: 200;
+}
+.tool-btn:hover .tooltip { display: block; }
+
+/* Brush Size */
+#brushPanel {
+  position: fixed; left: 10px; bottom: 10px;
+  background: rgba(20, 20, 40, 0.92);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 8px 12px; z-index: 100;
+  display: flex; align-items: center; gap: 8px;
+}
+#brushPanel label { color: rgba(255,255,255,0.5); font-size: 10px; }
+#brushSize { width: 80px; accent-color: #6496ff; }
+
+/* Stats Panel */
+#statsPanel {
+  position: fixed; right: 10px; top: 10px;
+  background: rgba(20, 20, 40, 0.92);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 10px 14px; z-index: 100;
+  color: #aaa; font-size: 11px; min-width: 160px;
+}
+#statsPanel .stat-row { 
+  display: flex; justify-content: space-between; 
+  padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+#statsPanel .stat-val { color: #ddd; font-weight: 500; }
+
+/* Speed Controls */
+#speedPanel {
+  position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(20, 20, 40, 0.92);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 6px 12px; z-index: 100;
+  display: flex; gap: 6px; align-items: center;
+}
+#speedPanel button {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #ccc; font-family: 'Inter', sans-serif;
+  font-size: 12px; padding: 4px 10px;
+  border-radius: 5px; cursor: pointer;
+}
+#speedPanel button:hover { background: rgba(255,255,255,0.15); }
+#speedPanel button.active { background: rgba(100,150,255,0.3); border-color: rgba(100,150,255,0.5); color: #fff; }
+
+/* Kingdom Panel */
+#kingdomPanel {
+  position: fixed; right: 10px; top: 50%; transform: translateY(-50%);
+  background: rgba(20, 20, 40, 0.92);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 12px; z-index: 100;
+  color: #ccc; font-size: 11px; width: 180px;
+  max-height: 60vh; overflow-y: auto;
+  display: none;
+}
+#kingdomPanel.visible { display: block; }
+#kingdomPanel h3 { color: #fff; font-size: 13px; margin-bottom: 8px; }
+.kingdom-entry {
+  padding: 6px 8px; margin: 4px 0;
+  background: rgba(255,255,255,0.05);
+  border-radius: 5px; border-left: 3px solid;
+}
+.kingdom-entry .k-name { font-weight: 600; font-size: 12px; }
+.kingdom-entry .k-pop { color: #999; font-size: 10px; }
+
+/* Minimap */
+#minimap {
+  position: fixed; right: 10px; bottom: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px; z-index: 100;
+  image-rendering: pixelated;
+}
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+<canvas id="minimap" width="140" height="100"></canvas>
+
+<!-- Top Bar -->
+<div id="topBar">
+  <button onclick="toggleKingdomPanel()">👑 Kingdoms</button>
+  <button onclick="newWorld()">🌍 New World</button>
+  <button id="toggleGridBtn" onclick="toggleGrid()">⊞ Grid</button>
+</div>
+
+<!-- Toolbar -->
+<div id="toolbar">
+  <div class="tool-section">
+    <div class="tool-section-title">Terrain</div>
+    <div class="tool-btn" onclick="setTool('shallow')" id="tool-shallow">🟦<span class="tooltip">Shallow Water</span></div>
+    <div class="tool-btn" onclick="setTool('deep')" id="tool-deep">🟫<span class="tooltip">Deep Water</span></div>
+    <div class="tool-btn" onclick="setTool('sand')" id="tool-sand">🟨<span class="tooltip">Sand</span></div>
+    <div class="tool-btn" onclick="setTool('grass')" id="tool-grass">🟩<span class="tooltip">Grass</span></div>
+    <div class="tool-btn" onclick="setTool('forest')" id="tool-forest">🌲<span class="tooltip">Forest</span></div>
+    <div class="tool-btn" onclick="setTool('stone')" id="tool-stone">⬜<span class="tooltip">Stone</span></div>
+    <div class="tool-btn" onclick="setTool('mountain')" id="tool-mountain">🏔️<span class="tooltip">Mountain</span></div>
+    <div class="tool-btn" onclick="setTool('snow')" id="tool-snow">❄️<span class="tooltip">Snow</span></div>
+  </div>
+  <div class="tool-section">
+    <div class="tool-section-title">Life</div>
+    <div class="tool-btn" onclick="setTool('human')" id="tool-human">🧑<span class="tooltip">Human</span></div>
+    <div class="tool-btn" onclick="setTool('elf')" id="tool-elf">🧝<span class="tooltip">Elf</span></div>
+    <div class="tool-btn" onclick="setTool('orc')" id="tool-orc">👹<span class="tooltip">Orc</span></div>
+    <div class="tool-btn" onclick="setTool('dwarf')" id="tool-dwarf">⛏️<span class="tooltip">Dwarf</span></div>
+    <div class="tool-btn" onclick="setTool('sheep')" id="tool-sheep">🐑<span class="tooltip">Sheep</span></div>
+    <div class="tool-btn" onclick="setTool('wolf')" id="tool-wolf">🐺<span class="tooltip">Wolf</span></div>
+    <div class="tool-btn" onclick="setTool('dragon')" id="tool-dragon">🐉<span class="tooltip">Dragon</span></div>
+  </div>
+  <div class="tool-section">
+    <div class="tool-section-title">Disasters</div>
+    <div class="tool-btn" onclick="setTool('fire')" id="tool-fire">🔥<span class="tooltip">Fire</span></div>
+    <div class="tool-btn" onclick="setTool('lightning')" id="tool-lightning">⚡<span class="tooltip">Lightning</span></div>
+    <div class="tool-btn" onclick="setTool('tornado')" id="tool-tornado">🌪️<span class="tooltip">Tornado</span></div>
+    <div class="tool-btn" onclick="setTool('meteor')" id="tool-meteor">☄️<span class="tooltip">Meteor</span></div>
+    <div class="tool-btn" onclick="setTool('nuke')" id="tool-nuke">☢️<span class="tooltip">Nuclear Bomb</span></div>
+    <div class="tool-btn" onclick="setTool('plague')" id="tool-plague">☠️<span class="tooltip">Plague</span></div>
+    <div class="tool-btn" onclick="setTool('acid')" id="tool-acid">🧪<span class="tooltip">Acid Rain</span></div>
+    <div class="tool-btn" onclick="setTool('earthquake')" id="tool-earthquake">💥<span class="tooltip">Earthquake</span></div>
+  </div>
+  <div class="tool-section">
+    <div class="tool-section-title">Tools</div>
+    <div class="tool-btn" onclick="setTool('inspect')" id="tool-inspect">🔍<span class="tooltip">Inspect</span></div>
+    <div class="tool-btn" onclick="setTool('eraser')" id="tool-eraser">🧹<span class="tooltip">Eraser</span></div>
+    <div class="tool-btn" onclick="setTool('magnet')" id="tool-magnet">🧲<span class="tooltip">Magnet (attract)</span></div>
+  </div>
+</div>
+
+<!-- Brush Size -->
+<div id="brushPanel">
+  <label>BRUSH</label>
+  <input type="range" id="brushSize" min="1" max="8" value="2">
+  <span id="brushVal" style="color:#ddd;font-size:11px;">2</span>
+</div>
+
+<!-- Stats Panel -->
+<div id="statsPanel">
+  <div class="stat-row"><span>Population</span><span class="stat-val" id="statPop">0</span></div>
+  <div class="stat-row"><span>Kingdoms</span><span class="stat-val" id="statKing">0</span></div>
+  <div class="stat-row"><span>Buildings</span><span class="stat-val" id="statBuild">0</span></div>
+  <div class="stat-row"><span>Animals</span><span class="stat-val" id="statAnim">0</span></div>
+  <div class="stat-row"><span>Year</span><span class="stat-val" id="statYear">0</span></div>
+</div>
+
+<!-- Speed Controls -->
+<div id="speedPanel">
+  <button onclick="setSpeed(0)" id="speed0">⏸</button>
+  <button onclick="setSpeed(1)" id="speed1" class="active">▶</button>
+  <button onclick="setSpeed(2)" id="speed2">▶▶</button>
+  <button onclick="setSpeed(3)" id="speed3">▶▶▶</button>
+</div>
+
+<!-- Kingdom Panel -->
+<div id="kingdomPanel">
+  <h3>👑 Kingdoms</h3>
+  <div id="kingdomList"></div>
+</div>
+
+<script>
+// ============ CONFIG ============
+const TILE = 6;
+const MAP_W = 250;
+const MAP_H = 180;
+const TILE_WATER = 0, TILE_DEEP = 1, TILE_SAND = 2, TILE_GRASS = 3, 
+      TILE_FOREST = 4, TILE_STONE = 5, TILE_MOUNTAIN = 6, TILE_SNOW = 7,
+      TILE_FIRE = 8, TILE_ACID = 9, TILE_RUIN = 10;
+
+const TILE_COLORS = {
+  [TILE_WATER]: ['#2563a8','#2970b8','#1e5a9e','#2466aa'],
+  [TILE_DEEP]: ['#163d6e','#1a4578','#123562','#184272'],
+  [TILE_SAND]: ['#d4b86a','#ccb060','#d9c074','#c8a856'],
+  [TILE_GRASS]: ['#3da345','#35963d','#45ad4d','#2e8e36'],
+  [TILE_FOREST]: ['#1a6e24','#1f7a2a','#156218','#227d2d'],
+  [TILE_STONE]: ['#8a8a8a','#7e7e7e','#949494','#868686'],
+  [TILE_MOUNTAIN]: ['#6a6a6a','#5e5e5e','#747474','#626262'],
+  [TILE_SNOW]: ['#e8eef5','#dde5ee','#eef3f9','#d5dee8'],
+  [TILE_FIRE]: ['#ff4400','#ff6600','#ff2200','#ff5500'],
+  [TILE_ACID]: ['#44ff00','#33dd00','#55ff22','#22cc00'],
+  [TILE_RUIN]: ['#4a4a4a','#3e3e3e','#545454','#424242'],
+};
+
+const RACE_HUMAN = 'human', RACE_ELF = 'elf', RACE_ORC = 'orc', RACE_DWARF = 'dwarf';
+const raceColors = { human: '#f5d0a0', elf: '#a0f5b0', orc: '#80c060', dwarf: '#d0a080' };
+const raceNames = { human: ['Ada','Borg','Carl','Dina','Erik','Fay','Gus','Hel','Ivan','Jana','Karl','Lea','Max','Nora','Olaf','Pia'],
+  elf: ['Arwen','Bael','Cel','Dael','Elar','Fael','Gil','Hael','Iri','Jal','Kel','Lael','Mir','Nael','Ori','Pael'],
+  orc: ['Azog','Brug','Crag','Drek','Erog','Frug','Grak','Harg','Iguz','Jarg','Krug','Larg','Mrog','Narg','Orug','Parg'],
+  dwarf: ['Brok','Crag','Durn','Ered','Falk','Grim','Hald','Iben','Jokl','Keld','Lorn','Meld','Norg','Odel','Puck','Rek'] };
+const kingdomNameParts = [['North','South','East','West','Great','Old','New','Dark','Bright','Iron','Gold','Silver','Red','Blue','Green','White','Black','Storm'],
+  ['land','heim','gard','hold','vale','mark','wood','keep','fall','haven','reach','shire','forge','dale','mount','stone','ridge','crest']];
+
+// ============ STATE ============
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let map = [];
+let tileVariant = [];
+let buildings = [];
+let creatures = [];
+let kingdoms = [];
+let particles = [];
+let tornadoes = [];
+let meteors = [];
+let fires = new Set();
+
+let camX = 0, camY = 0, zoom = 1;
+let currentTool = 'grass';
+let brushSize = 2;
+let gameSpeed = 1;
+let showGrid = false;
+let tick = 0;
+let year = 0;
+let mouseDown = false;
+let mouseX = 0, mouseY = 0;
+let lastDragX, lastDragY;
+let isDragging = false;
+let rightMouseDown = false;
+let kingdomPanelVisible = false;
+
+// ============ INIT ============
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function generateWorld() {
+  map = [];
+  tileVariant = [];
+  buildings = [];
+  creatures = [];
+  kingdoms = [];
+  particles = [];
+  tornadoes = [];
+  meteors = [];
+  fires = new Set();
+  tick = 0; year = 0;
+
+  // Noise-based terrain generation
+  for (let y = 0; y < MAP_H; y++) {
+    map[y] = [];
+    tileVariant[y] = [];
+    for (let x = 0; x < MAP_W; x++) {
+      let n = noise(x * 0.04, y * 0.04) + noise(x * 0.08, y * 0.08) * 0.5;
+      n /= 1.5;
+      // Edge fade to water
+      let edgeDist = Math.min(x, y, MAP_W - x - 1, MAP_H - y - 1) / 20;
+      n -= Math.max(0, 1 - edgeDist) * 0.5;
+
+      if (n < -0.15) map[y][x] = TILE_DEEP;
+      else if (n < 0.05) map[y][x] = TILE_WATER;
+      else if (n < 0.12) map[y][x] = TILE_SAND;
+      else if (n < 0.35) map[y][x] = TILE_GRASS;
+      else if (n < 0.5) map[y][x] = TILE_FOREST;
+      else if (n < 0.65) map[y][x] = TILE_STONE;
+      else if (n < 0.78) map[y][x] = TILE_MOUNTAIN;
+      else map[y][x] = TILE_SNOW;
+
+      tileVariant[y][x] = Math.floor(Math.random() * 4);
+    }
+  }
+  camX = MAP_W * TILE / 2 - W / 2;
+  camY = MAP_H * TILE / 2 - H / 2;
+}
+
+// Simple value noise
+const noiseGrid = {};
+function noiseVal(ix, iy) {
+  const key = ix + ',' + iy;
+  if (!(key in noiseGrid)) noiseGrid[ix + ',' + iy] = Math.random() * 2 - 1;
+  return noiseGrid[key];
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+function noise(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = smoothstep(x - ix), fy = smoothstep(y - iy);
+  return lerp(lerp(noiseVal(ix, iy), noiseVal(ix + 1, iy), fx),
+              lerp(noiseVal(ix, iy + 1), noiseVal(ix + 1, iy + 1), fx), fy);
+}
+
+generateWorld();
+
+// ============ TOOLS ============
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('tool-' + t);
+  if (el) el.classList.add('active');
+}
+setTool('grass');
+
+document.getElementById('brushSize').addEventListener('input', e => {
+  brushSize = parseInt(e.target.value);
+  document.getElementById('brushVal').textContent = brushSize;
+});
+
+function setSpeed(s) {
+  gameSpeed = s;
+  document.querySelectorAll('#speedPanel button').forEach(b => b.classList.remove('active'));
+  document.getElementById('speed' + s).classList.add('active');
+}
+
+function toggleGrid() {
+  showGrid = !showGrid;
+  document.getElementById('toggleGridBtn').classList.toggle('active', showGrid);
+}
+
+function toggleKingdomPanel() {
+  kingdomPanelVisible = !kingdomPanelVisible;
+  document.getElementById('kingdomPanel').classList.toggle('visible', kingdomPanelVisible);
+}
+
+function newWorld() {
+  Object.keys(noiseGrid).forEach(k => delete noiseGrid[k]);
+  generateWorld();
+}
+
+// ============ CAMERA / INPUT ============
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 2 || e.button === 1) {
+    rightMouseDown = true;
+    lastDragX = e.clientX;
+    lastDragY = e.clientY;
+    isDragging = true;
+    e.preventDefault();
+    return;
+  }
+  mouseDown = true;
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  applyTool(e.clientX, e.clientY);
+});
+
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  if (rightMouseDown) {
+    camX -= (e.clientX - lastDragX) / zoom;
+    camY -= (e.clientY - lastDragY) / zoom;
+    lastDragX = e.clientX;
+    lastDragY = e.clientY;
+  }
+  if (mouseDown) applyTool(e.clientX, e.clientY);
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (e.button === 2 || e.button === 1) { rightMouseDown = false; isDragging = false; return; }
+  mouseDown = false;
+});
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('wheel', e => {
+  const oldZoom = zoom;
+  zoom *= e.deltaY < 0 ? 1.15 : 0.87;
+  zoom = Math.max(0.3, Math.min(4, zoom));
+  // Zoom toward mouse position
+  camX += (e.clientX / oldZoom + camX) - (e.clientX / zoom + camX);
+  camY += (e.clientY / oldZoom + camY) - (e.clientY / zoom + camY);
+  e.preventDefault();
+}, { passive: false });
+
+// Touch support
+let touches = {};
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) touches[t.identifier] = { x: t.clientX, y: t.clientY };
+  if (e.touches.length === 1) { mouseDown = true; applyTool(e.touches[0].clientX, e.touches[0].clientY); }
+});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    mouseDown = false;
+    const t0 = e.touches[0], t1 = e.touches[1];
+    const prev0 = touches[t0.identifier], prev1 = touches[t1.identifier];
+    if (prev0 && prev1) {
+      const cx = (t0.clientX + t1.clientX) / 2, cy = (t0.clientY + t1.clientY) / 2;
+      const pcx = (prev0.x + prev1.x) / 2, pcy = (prev0.y + prev1.y) / 2;
+      camX -= (cx - pcx) / zoom;
+      camY -= (cy - pcy) / zoom;
+      const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      const pdist = Math.hypot(prev1.x - prev0.x, prev1.y - prev0.y);
+      if (pdist > 0) zoom = Math.max(0.3, Math.min(4, zoom * (dist / pdist)));
+    }
+    for (const t of e.changedTouches) touches[t.identifier] = { x: t.clientX, y: t.clientY };
+  } else if (e.touches.length === 1 && mouseDown) {
+    applyTool(e.touches[0].clientX, e.touches[0].clientY);
+  }
+});
+canvas.addEventListener('touchend', e => { mouseDown = false; for (const t of e.changedTouches) delete touches[t.identifier]; });
+
+function screenToTile(sx, sy) {
+  return {
+    x: Math.floor((sx / zoom + camX) / TILE),
+    y: Math.floor((sy / zoom + camY) / TILE)
+  };
+}
+
+// ============ APPLY TOOL ============
+function applyTool(sx, sy) {
+  const { x: tx, y: ty } = screenToTile(sx, sy);
+  const r = brushSize;
+  const terrainTools = { shallow: TILE_WATER, deep: TILE_DEEP, sand: TILE_SAND, grass: TILE_GRASS,
+    forest: TILE_FOREST, stone: TILE_STONE, mountain: TILE_MOUNTAIN, snow: TILE_SNOW };
+  
+  if (terrainTools[currentTool] !== undefined) {
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (dx*dx + dy*dy > r*r) continue;
+      const nx = tx + dx, ny = ty + dy;
+      if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
+        map[ny][nx] = terrainTools[currentTool];
+        tileVariant[ny][nx] = Math.floor(Math.random() * 4);
+      }
+    }
+  } else if (currentTool === 'eraser') {
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (dx*dx + dy*dy > r*r) continue;
+      const nx = tx + dx, ny = ty + dy;
+      if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
+        map[ny][nx] = TILE_WATER;
+        fires.delete(ny * MAP_W + nx);
+        buildings = buildings.filter(b => !(b.x === nx && b.y === ny));
+        creatures = creatures.filter(c => !(Math.abs(c.x - nx) < 1 && Math.abs(c.y - ny) < 1));
+      }
+    }
+  } else if (['human','elf','orc','dwarf'].includes(currentTool)) {
+    if (isLand(tx, ty)) spawnCivilized(tx, ty, currentTool);
+  } else if (currentTool === 'sheep') {
+    if (isLand(tx, ty)) creatures.push(createAnimal(tx, ty, 'sheep'));
+  } else if (currentTool === 'wolf') {
+    if (isLand(tx, ty)) creatures.push(createAnimal(tx, ty, 'wolf'));
+  } else if (currentTool === 'dragon') {
+    if (isLand(tx, ty)) creatures.push(createDragon(tx, ty));
+  } else if (currentTool === 'fire') {
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (dx*dx + dy*dy > r*r) continue;
+      const nx = tx + dx, ny = ty + dy;
+      if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && isLand(nx, ny)) {
+        fires.add(ny * MAP_W + nx);
+        map[ny][nx] = TILE_FIRE;
+      }
+    }
+  } else if (currentTool === 'lightning') {
+    spawnLightning(tx, ty);
+  } else if (currentTool === 'tornado') {
+    tornadoes.push({ x: tx, y: ty, life: 600, angle: Math.random() * Math.PI * 2 });
+  } else if (currentTool === 'meteor') {
+    meteors.push({ tx, ty, progress: 0 });
+  } else if (currentTool === 'nuke') {
+    spawnNuke(tx, ty);
+  } else if (currentTool === 'plague') {
+    creatures.filter(c => Math.abs(c.x - tx) < r+2 && Math.abs(c.y - ty) < r+2).forEach(c => c.plague = true);
+  } else if (currentTool === 'acid') {
+    for (let dy = -r-2; dy <= r+2; dy++) for (let dx = -r-2; dx <= r+2; dx++) {
+      const nx = tx + dx, ny = ty + dy;
+      if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && isLand(nx, ny) && Math.random() < 0.4) {
+        map[ny][nx] = TILE_ACID;
+      }
+    }
+  } else if (currentTool === 'earthquake') {
+    spawnEarthquake(tx, ty);
+  } else if (currentTool === 'magnet') {
+    creatures.forEach(c => {
+      const dx = tx - c.x, dy = ty - c.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 20 && dist > 0) { c.x += dx / dist * 0.5; c.y += dy / dist * 0.5; }
+    });
+  } else if (currentTool === 'inspect') {
+    // Visual highlight handled in render
+  }
+}
+
+function isLand(x, y) {
+  if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) return false;
+  return map[y][x] !== TILE_WATER && map[y][x] !== TILE_DEEP;
+}
+
+// ============ CREATURES ============
+function createPerson(x, y, race, kingdom) {
+  return {
+    x, y, race, type: 'person',
+    hp: race === 'orc' ? 120 : race === 'dwarf' ? 140 : race === 'elf' ? 90 : 100,
+    maxHp: race === 'orc' ? 120 : race === 'dwarf' ? 140 : race === 'elf' ? 90 : 100,
+    attack: race === 'orc' ? 18 : race === 'dwarf' ? 14 : race === 'elf' ? 12 : 10,
+    speed: race === 'elf' ? 0.06 : race === 'dwarf' ? 0.03 : 0.04,
+    kingdom, age: 0, maxAge: 800 + Math.random() * 600,
+    name: raceNames[race][Math.floor(Math.random() * raceNames[race].length)],
+    targetX: x, targetY: y, moveTimer: 0,
+    fighting: false, enemy: null, plague: false,
+    builder: Math.random() < 0.3, warrior: Math.random() < 0.4,
+    level: 1, xp: 0,
+  };
+}
+
+function createAnimal(x, y, kind) {
+  return {
+    x, y, type: kind,
+    hp: kind === 'wolf' ? 40 : 20,
+    maxHp: kind === 'wolf' ? 40 : 20,
+    attack: kind === 'wolf' ? 8 : 0,
+    speed: kind === 'wolf' ? 0.05 : 0.02,
+    targetX: x + Math.random() * 10 - 5, targetY: y + Math.random() * 10 - 5,
+    moveTimer: 0, age: 0, maxAge: 300 + Math.random() * 200,
+    plague: false,
+  };
+}
+
+function createDragon(x, y) {
+  return {
+    x, y, type: 'dragon',
+    hp: 1000, maxHp: 1000, attack: 50, speed: 0.08,
+    targetX: x, targetY: y, moveTimer: 0,
+    age: 0, maxAge: 99999, plague: false,
+    fireTimer: 0,
+  };
+}
+
+function spawnCivilized(x, y, race) {
+  let kingdom = kingdoms.find(k => k.race === race);
+  if (!kingdom) {
+    kingdom = {
+      id: kingdoms.length,
+      race,
+      name: kingdomNameParts[0][Math.floor(Math.random() * kingdomNameParts[0].length)] +
+            kingdomNameParts[1][Math.floor(Math.random() * kingdomNameParts[1].length)],
+      color: '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0'),
+      capitalX: x, capitalY: y, atWar: [],
+    };
+    kingdoms.push(kingdom);
+  }
+  for (let i = 0; i < 5; i++) {
+    const ox = x + Math.floor(Math.random() * 5 - 2);
+    const oy = y + Math.floor(Math.random() * 5 - 2);
+    if (isLand(ox, oy)) creatures.push(createPerson(ox, oy, race, kingdom.id));
+  }
+}
+
+// ============ DISASTERS ============
+function spawnLightning(tx, ty) {
+  for (let i = 0; i < 15; i++) particles.push({
+    x: tx * TILE + TILE/2, y: ty * TILE + TILE/2,
+    vx: (Math.random()-0.5)*3, vy: (Math.random()-0.5)*3,
+    life: 30 + Math.random()*20, color: '#ffffff', size: 2
+  });
+  if (isLand(tx, ty)) { fires.add(ty * MAP_W + tx); map[ty][tx] = TILE_FIRE; }
+  creatures.filter(c => Math.abs(c.x-tx)<2 && Math.abs(c.y-ty)<2).forEach(c => c.hp -= 80);
+}
+
+function spawnNuke(tx, ty) {
+  const r = 15;
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist > r) continue;
+    const nx = tx + dx, ny = ty + dy;
+    if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
+      if (dist < r * 0.4) { map[ny][nx] = TILE_RUIN; }
+      else if (dist < r * 0.7 && isLand(nx, ny)) { map[ny][nx] = TILE_FIRE; fires.add(ny * MAP_W + nx); }
+      else if (isLand(nx, ny) && Math.random() < 0.3) { map[ny][nx] = TILE_FIRE; fires.add(ny * MAP_W + nx); }
+      buildings = buildings.filter(b => !(b.x === nx && b.y === ny));
+    }
+  }
+  creatures.filter(c => Math.hypot(c.x - tx, c.y - ty) < r).forEach(c => c.hp = 0);
+  for (let i = 0; i < 80; i++) {
+    const a = Math.random() * Math.PI * 2, d = Math.random() * r;
+    particles.push({
+      x: tx * TILE, y: ty * TILE,
+      vx: Math.cos(a)*d*0.3, vy: Math.sin(a)*d*0.3 - 1,
+      life: 60 + Math.random()*60, 
+      color: Math.random() < 0.5 ? '#ff6600' : '#ffaa00',
+      size: 3 + Math.random()*4
+    });
+  }
+}
+
+function spawnEarthquake(tx, ty) {
+  const r = 12;
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const nx = tx + dx, ny = ty + dy;
+    if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && Math.random() < 0.15) {
+      if (map[ny][nx] === TILE_GRASS || map[ny][nx] === TILE_FOREST) map[ny][nx] = TILE_STONE;
+      buildings = buildings.filter(b => !(b.x === nx && b.y === ny && Math.random() < 0.5));
+    }
+  }
+  creatures.filter(c => Math.hypot(c.x - tx, c.y - ty) < r).forEach(c => c.hp -= 30);
+}
+
+// ============ SIMULATION ============
+function simulate() {
+  if (gameSpeed === 0) return;
+  for (let s = 0; s < gameSpeed; s++) {
+    tick++;
+    if (tick % 120 === 0) year++;
+
+    // Fire spread
+    if (tick % 10 === 0) {
+      const newFires = [];
+      fires.forEach(key => {
+        const fy = Math.floor(key / MAP_W), fx = key % MAP_W;
+        if (Math.random() < 0.02) { fires.delete(key); map[fy][fx] = TILE_RUIN; return; }
+        for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+          const nx = fx+dx, ny = fy+dy;
+          if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
+            const t = map[ny][nx];
+            if ((t === TILE_GRASS || t === TILE_FOREST) && Math.random() < 0.08) {
+              newFires.push(ny * MAP_W + nx);
+            }
+          }
+        }
+      });
+      newFires.forEach(k => { fires.add(k); map[Math.floor(k/MAP_W)][k%MAP_W] = TILE_FIRE; });
+    }
+
+    // Acid decay
+    if (tick % 30 === 0) {
+      for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
+        if (map[y][x] === TILE_ACID && Math.random() < 0.05) map[y][x] = TILE_RUIN;
+      }
+    }
+
+    // Update tornadoes
+    tornadoes.forEach(t => {
+      t.life--;
+      t.angle += 0.05;
+      t.x += Math.cos(t.angle) * 0.3;
+      t.y += Math.sin(t.angle) * 0.15;
+      const tx = Math.floor(t.x), ty = Math.floor(t.y);
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const nx = tx+dx, ny = ty+dy;
+        if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
+          if (Math.random() < 0.05 && (map[ny][nx] === TILE_FOREST || map[ny][nx] === TILE_GRASS)) {
+            map[ny][nx] = TILE_RUIN;
+          }
+          buildings = buildings.filter(b => !(b.x === nx && b.y === ny && Math.random() < 0.1));
+        }
+      }
+      creatures.filter(c => Math.hypot(c.x - t.x, c.y - t.y) < 3).forEach(c => {
+        c.x += (Math.random()-0.5)*2;
+        c.y += (Math.random()-0.5)*2;
+        c.hp -= 2;
+      });
+      particles.push({
+        x: t.x * TILE, y: t.y * TILE,
+        vx: (Math.random()-0.5)*2, vy: -Math.random()*2,
+        life: 20, color: '#888', size: 2 + Math.random()*3
+      });
+    });
+    tornadoes = tornadoes.filter(t => t.life > 0);
+
+    // Update meteors
+    meteors.forEach(m => {
+      m.progress += 0.02;
+      if (m.progress >= 1) {
+        const r = 6;
+        for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+          if (dx*dx+dy*dy > r*r) continue;
+          const nx = m.tx+dx, ny = m.ty+dy;
+          if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
+            if (dx*dx+dy*dy < 4) map[ny][nx] = TILE_RUIN;
+            else if (isLand(nx,ny) && Math.random()<0.4) { map[ny][nx] = TILE_FIRE; fires.add(ny*MAP_W+nx); }
+            buildings = buildings.filter(b => !(b.x === nx && b.y === ny));
+          }
+        }
+        creatures.filter(c => Math.hypot(c.x-m.tx, c.y-m.ty) < r).forEach(c => c.hp -= 200);
+        for (let i = 0; i < 40; i++) {
+          const a = Math.random()*Math.PI*2;
+          particles.push({ x: m.tx*TILE, y: m.ty*TILE, vx: Math.cos(a)*3, vy: Math.sin(a)*3-1,
+            life: 40+Math.random()*30, color: '#ff4400', size: 2+Math.random()*3 });
+        }
+      }
+    });
+    meteors = meteors.filter(m => m.progress < 1);
+
+    // Update creatures
+    for (let i = creatures.length - 1; i >= 0; i--) {
+      const c = creatures[i];
+      c.age++;
+
+      if (c.hp <= 0 || c.age > c.maxAge) {
+        for (let p = 0; p < 3; p++) particles.push({
+          x: c.x*TILE, y: c.y*TILE, vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
+          life: 20, color: '#ff0000', size: 2 });
+        creatures.splice(i, 1);
+        continue;
+      }
+
+      if (c.plague && tick % 30 === 0) {
+        c.hp -= 5;
+        creatures.filter(o => o !== c && Math.hypot(o.x-c.x, o.y-c.y) < 3 && Math.random() < 0.1).forEach(o => o.plague = true);
+      }
+
+      const cx = Math.floor(c.x), cy = Math.floor(c.y);
+      if (cx >= 0 && cx < MAP_W && cy >= 0 && cy < MAP_H) {
+        if (map[cy][cx] === TILE_FIRE) c.hp -= 3;
+        if (map[cy][cx] === TILE_ACID) c.hp -= 5;
+        if (map[cy][cx] === TILE_WATER || map[cy][cx] === TILE_DEEP) {
+          if (c.type !== 'dragon') c.hp -= 1;
+        }
+      }
+
+      c.moveTimer--;
+      if (c.moveTimer <= 0) {
+        c.moveTimer = 30 + Math.random() * 60;
+        if (c.type === 'person') updatePersonAI(c);
+        else if (c.type === 'wolf') updateWolfAI(c);
+        else if (c.type === 'sheep') updateSheepAI(c);
+        else if (c.type === 'dragon') updateDragonAI(c);
+      }
+
+      const dx = c.targetX - c.x, dy = c.targetY - c.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist > 0.2) {
+        const spd = c.speed || 0.04;
+        c.x += (dx / dist) * spd;
+        c.y += (dy / dist) * spd;
+      }
+
+      c.x = Math.max(0, Math.min(MAP_W - 1, c.x));
+      c.y = Math.max(0, Math.min(MAP_H - 1, c.y));
+    }
+
+    // Civilization building
+    if (tick % 60 === 0) civilizationTick();
+
+    // Animal reproduction
+    if (tick % 200 === 0) {
+      const sheep = creatures.filter(c => c.type === 'sheep');
+      const wolves = creatures.filter(c => c.type === 'wolf');
+      if (sheep.length > 1 && sheep.length < 100) {
+        const s = sheep[Math.floor(Math.random() * sheep.length)];
+        if (isLand(Math.floor(s.x), Math.floor(s.y)))
+          creatures.push(createAnimal(s.x + Math.random()*2-1, s.y + Math.random()*2-1, 'sheep'));
+      }
+      if (wolves.length > 1 && wolves.length < 30) {
+        const w = wolves[Math.floor(Math.random() * wolves.length)];
+        if (isLand(Math.floor(w.x), Math.floor(w.y)))
+          creatures.push(createAnimal(w.x + Math.random()*2-1, w.y + Math.random()*2-1, 'wolf'));
+      }
+    }
+
+    particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life--; p.vy += 0.02; });
+    particles = particles.filter(p => p.life > 0);
+  }
+}
+
+function updatePersonAI(c) {
+  const k = kingdoms[c.kingdom];
+  if (!k) return;
+
+  const nearDragon = creatures.find(d => d.type === 'dragon' && Math.hypot(d.x-c.x, d.y-c.y) < 8);
+  if (nearDragon) {
+    c.targetX = c.x + (c.x - nearDragon.x) * 2;
+    c.targetY = c.y + (c.y - nearDragon.y) * 2;
+    return;
+  }
+
+  if (c.warrior) {
+    const enemy = creatures.find(e => e.type === 'person' && e.kingdom !== c.kingdom &&
+      Math.hypot(e.x - c.x, e.y - c.y) < 10 && k.atWar.includes(e.kingdom));
+    if (enemy) {
+      c.targetX = enemy.x; c.targetY = enemy.y;
+      if (Math.hypot(enemy.x - c.x, enemy.y - c.y) < 1.5) {
+        enemy.hp -= c.attack * (0.8 + Math.random() * 0.4);
+        c.hp -= enemy.attack * (0.3 + Math.random() * 0.3);
+        c.xp += 2;
+        if (c.xp > c.level * 20) { c.level++; c.attack += 2; c.maxHp += 10; c.hp = Math.min(c.hp + 10, c.maxHp); }
+      }
+      return;
+    }
+    const wolf = creatures.find(w => w.type === 'wolf' && Math.hypot(w.x-c.x, w.y-c.y) < 6);
+    if (wolf) {
+      c.targetX = wolf.x; c.targetY = wolf.y;
+      if (Math.hypot(wolf.x-c.x, wolf.y-c.y) < 1.5) { wolf.hp -= c.attack; c.hp -= wolf.attack * 0.3; }
+      return;
+    }
+  }
+
+  if (c.builder && Math.random() < 0.2) {
+    const bx = Math.floor(c.x), by = Math.floor(c.y);
+    if (isLand(bx, by) && !buildings.find(b => b.x === bx && b.y === by) && map[by][bx] !== TILE_FIRE) {
+      const popHere = creatures.filter(p => p.type === 'person' && p.kingdom === c.kingdom && Math.hypot(p.x-c.x, p.y-c.y) < 15).length;
+      if (popHere > 3 && buildings.filter(b => b.kingdom === c.kingdom).length < popHere * 2) {
+        const type = Math.random() < 0.6 ? 'house' : Math.random() < 0.5 ? 'farm' : 'tower';
+        buildings.push({ x: bx, y: by, type, kingdom: c.kingdom, hp: 100, level: 1 });
+      }
+    }
+    return;
+  }
+
+  if (Math.random() < 0.3) {
+    c.targetX = k.capitalX + (Math.random() - 0.5) * 30;
+    c.targetY = k.capitalY + (Math.random() - 0.5) * 30;
+  } else {
+    c.targetX = c.x + (Math.random() - 0.5) * 10;
+    c.targetY = c.y + (Math.random() - 0.5) * 10;
+  }
+}
+
+function updateWolfAI(c) {
+  const prey = creatures.find(p => (p.type === 'sheep' || (p.type === 'person' && p.hp < 30)) && Math.hypot(p.x-c.x, p.y-c.y) < 12);
+  if (prey) {
+    c.targetX = prey.x; c.targetY = prey.y;
+    if (Math.hypot(prey.x-c.x, prey.y-c.y) < 1) prey.hp -= c.attack;
+  } else {
+    c.targetX = c.x + (Math.random()-0.5) * 10;
+    c.targetY = c.y + (Math.random()-0.5) * 10;
+  }
+}
+
+function updateSheepAI(c) {
+  const wolf = creatures.find(w => w.type === 'wolf' && Math.hypot(w.x-c.x, w.y-c.y) < 6);
+  if (wolf) {
+    c.targetX = c.x + (c.x - wolf.x) * 3;
+    c.targetY = c.y + (c.y - wolf.y) * 3;
+  } else {
+    c.targetX = c.x + (Math.random()-0.5) * 6;
+    c.targetY = c.y + (Math.random()-0.5) * 6;
+  }
+}
+
+function updateDragonAI(c) {
+  c.fireTimer--;
+  const nearBuilding = buildings.find(b => Math.hypot(b.x-c.x, b.y-c.y) < 20);
+  if (nearBuilding) {
+    c.targetX = nearBuilding.x; c.targetY = nearBuilding.y;
+    if (Math.hypot(nearBuilding.x-c.x, nearBuilding.y-c.y) < 3 && c.fireTimer <= 0) {
+      c.fireTimer = 20;
+      const fx = Math.floor(c.x), fy = Math.floor(c.y);
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const nx = fx+dx, ny = fy+dy;
+        if (nx>=0 && nx<MAP_W && ny>=0 && ny<MAP_H && isLand(nx,ny)) {
+          fires.add(ny*MAP_W+nx); map[ny][nx] = TILE_FIRE;
+        }
+      }
+    }
+  } else {
+    c.targetX = c.x + (Math.random()-0.5) * 20;
+    c.targetY = c.y + (Math.random()-0.5) * 20;
+  }
+  const person = creatures.find(p => p.type === 'person' && Math.hypot(p.x-c.x, p.y-c.y) < 2);
+  if (person) person.hp -= c.attack * 0.3;
+}
+
+function civilizationTick() {
+  kingdoms.forEach((k, ki) => {
+    const pop = creatures.filter(c => c.type === 'person' && c.kingdom === ki);
+    if (pop.length === 0) return;
+
+    if (pop.length < 200 && pop.length >= 2 && buildings.filter(b => b.kingdom === ki && b.type === 'house').length > 0) {
+      const parent = pop[Math.floor(Math.random() * pop.length)];
+      if (Math.random() < 0.15 && isLand(Math.floor(parent.x), Math.floor(parent.y))) {
+        creatures.push(createPerson(parent.x + Math.random()*2-1, parent.y + Math.random()*2-1, k.race, ki));
+      }
+    }
+
+    if (tick % 600 === 0 && kingdoms.length > 1) {
+      const other = Math.floor(Math.random() * kingdoms.length);
+      if (other !== ki && !k.atWar.includes(other) && Math.random() < 0.15) {
+        k.atWar.push(other);
+        kingdoms[other].atWar.push(ki);
+      }
+      k.atWar = k.atWar.filter(wk => {
+        if (Math.random() < 0.05) {
+          kingdoms[wk].atWar = kingdoms[wk].atWar.filter(w => w !== ki);
+          return false;
+        }
+        return true;
+      });
+    }
+
+    buildings.filter(b => b.kingdom === ki && b.level < 3 && Math.random() < 0.01).forEach(b => b.level++);
+
+    if (tick % 300 === 0) {
+      const kb = buildings.filter(b => b.kingdom === ki);
+      if (kb.length > 1) {
+        k.capitalX = Math.round(kb.reduce((s,b)=>s+b.x,0)/kb.length);
+        k.capitalY = Math.round(kb.reduce((s,b)=>s+b.y,0)/kb.length);
+      }
+    }
+  });
+}
+
+// ============ RENDERING ============
+function render() {
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.scale(zoom, zoom);
+  ctx.translate(-camX, -camY);
+
+  const startX = Math.max(0, Math.floor(camX / TILE) - 1);
+  const startY = Math.max(0, Math.floor(camY / TILE) - 1);
+  const endX = Math.min(MAP_W, Math.ceil((camX + W / zoom) / TILE) + 1);
+  const endY = Math.min(MAP_H, Math.ceil((camY + H / zoom) / TILE) + 1);
+
+  // Draw tiles
+  for (let y = startY; y < endY; y++) {
+    for (let x = startX; x < endX; x++) {
+      const t = map[y][x];
+      const v = tileVariant[y][x];
+      const colors = TILE_COLORS[t];
+      ctx.fillStyle = colors ? colors[v] : '#333';
+      ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+
+      if (t === TILE_FOREST && zoom > 0.7) {
+        ctx.fillStyle = '#0d5015';
+        ctx.fillRect(x * TILE + 1 + (v % 2) * 2, y * TILE + 1 + Math.floor(v / 2) * 2, 2, 2);
+      }
+      if (t === TILE_MOUNTAIN && zoom > 0.7) {
+        ctx.fillStyle = '#888';
+        ctx.fillRect(x * TILE + 2, y * TILE + 1, 2, 1);
+      }
+    }
+  }
+
+  // Grid
+  if (showGrid && zoom > 0.8) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.lineWidth = 0.5;
+    for (let x = startX; x <= endX; x++) {
+      ctx.beginPath(); ctx.moveTo(x * TILE, startY * TILE); ctx.lineTo(x * TILE, endY * TILE); ctx.stroke();
+    }
+    for (let y = startY; y <= endY; y++) {
+      ctx.beginPath(); ctx.moveTo(startX * TILE, y * TILE); ctx.lineTo(endX * TILE, y * TILE); ctx.stroke();
+    }
+  }
+
+  // Kingdom territory borders
+  if (zoom > 0.5) {
+    buildings.forEach(b => {
+      const k = kingdoms[b.kingdom];
+      if (!k) return;
+      ctx.strokeStyle = k.color + '60';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(b.x * TILE - 2, b.y * TILE - 2, TILE + 4, TILE + 4);
+    });
+  }
+
+  // Buildings
+  buildings.forEach(b => {
+    const k = kingdoms[b.kingdom];
+    const bx = b.x * TILE, by = b.y * TILE;
+    if (bx < (camX-2) || bx > camX + W/zoom + 2 || by < (camY-2) || by > camY + H/zoom + 2) return;
+    
+    if (b.type === 'house') {
+      const s = 2 + b.level;
+      ctx.fillStyle = k ? k.color : '#a86032';
+      ctx.fillRect(bx + (TILE-s)/2, by + (TILE-s)/2, s, s);
+      ctx.fillStyle = '#6b3020';
+      ctx.fillRect(bx + (TILE-s)/2, by + (TILE-s)/2 - 1, s, 1);
+    } else if (b.type === 'farm') {
+      ctx.fillStyle = '#c8a83c';
+      ctx.fillRect(bx + 1, by + 1, TILE - 2, TILE - 2);
+      ctx.fillStyle = '#a89030';
+      ctx.fillRect(bx + 2, by + 2, TILE - 4, TILE - 4);
+    } else if (b.type === 'tower') {
+      ctx.fillStyle = '#808080';
+      const s = 2 + b.level;
+      ctx.fillRect(bx + (TILE-s)/2, by + (TILE-s-2)/2, s, s + 2);
+      ctx.fillStyle = k ? k.color : '#666';
+      ctx.fillRect(bx + (TILE-s)/2, by + (TILE-s-2)/2 - 1, s, 1);
+    }
+  });
+
+  // Creatures
+  creatures.forEach(c => {
+    const cx = c.x * TILE, cy = c.y * TILE;
+    if (cx < camX - 10 || cx > camX + W/zoom + 10 || cy < camY - 10 || cy > camY + H/zoom + 10) return;
+
+    if (c.type === 'person') {
+      const k = kingdoms[c.kingdom];
+      ctx.fillStyle = k ? k.color : raceColors[c.race];
+      ctx.fillRect(cx + 1, cy + 1, TILE - 2, TILE - 2);
+      ctx.fillStyle = raceColors[c.race];
+      ctx.fillRect(cx + 2, cy + 1, TILE - 4, 2);
+      if (c.plague) { ctx.fillStyle = '#00ff00'; ctx.fillRect(cx, cy, 1, 1); }
+      if (c.level > 1 && zoom > 0.8) { ctx.fillStyle = '#ffd700'; ctx.fillRect(cx + TILE - 2, cy, 2, 1); }
+    } else if (c.type === 'sheep') {
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(cx + 1, cy + 2, TILE - 2, TILE - 3);
+      ctx.fillStyle = '#222';
+      ctx.fillRect(cx + 1, cy + 1, 2, 2);
+    } else if (c.type === 'wolf') {
+      ctx.fillStyle = '#606060';
+      ctx.fillRect(cx + 1, cy + 1, TILE - 2, TILE - 2);
+      ctx.fillStyle = '#ff3300';
+      ctx.fillRect(cx + 1, cy + 2, 1, 1);
+      ctx.fillRect(cx + 3, cy + 2, 1, 1);
+    } else if (c.type === 'dragon') {
+      ctx.fillStyle = '#cc0000';
+      ctx.fillRect(cx - 1, cy - 1, TILE + 2, TILE + 2);
+      ctx.fillStyle = '#ff4400';
+      ctx.fillRect(cx, cy, TILE, TILE);
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillRect(cx + 1, cy + 1, 2, 1);
+      ctx.fillStyle = '#990000';
+      ctx.fillRect(cx - 2, cy, 2, 3);
+      ctx.fillRect(cx + TILE, cy, 2, 3);
+    }
+
+    if (c.hp < c.maxHp && zoom > 0.6) {
+      const hpRatio = Math.max(0, c.hp / c.maxHp);
+      ctx.fillStyle = '#300';
+      ctx.fillRect(cx, cy - 2, TILE, 1);
+      ctx.fillStyle = hpRatio > 0.5 ? '#0f0' : hpRatio > 0.25 ? '#ff0' : '#f00';
+      ctx.fillRect(cx, cy - 2, TILE * hpRatio, 1);
+    }
+  });
+
+  // Tornado visual
+  tornadoes.forEach(t => {
+    ctx.fillStyle = 'rgba(150,150,150,0.6)';
+    for (let i = 0; i < 8; i++) {
+      const a = t.angle + i * 0.8;
+      const r = 1 + i * 0.5;
+      ctx.fillRect(t.x * TILE + Math.cos(a) * r * TILE * 0.3, t.y * TILE + Math.sin(a) * r * TILE * 0.3 - i * 2, 3, 3);
+    }
+  });
+
+  // Meteor visual
+  meteors.forEach(m => {
+    const px = m.tx * TILE + (1 - m.progress) * 80;
+    const py = m.ty * TILE - (1 - m.progress) * 120;
+    ctx.fillStyle = '#ff6600';
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffaa00';
+    ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,100,0,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + 20, py - 30); ctx.stroke();
+  });
+
+  // Particles
+  particles.forEach(p => {
+    ctx.globalAlpha = Math.min(1, p.life / 15);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+  });
+  ctx.globalAlpha = 1;
+
+  // Brush preview
+  if (!rightMouseDown) {
+    const { x: bx, y: by } = screenToTile(mouseX, mouseY);
+    const r = brushSize;
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1 / zoom;
+    ctx.beginPath();
+    ctx.arc((bx + 0.5) * TILE, (by + 0.5) * TILE, r * TILE, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+  drawMinimap();
+}
+
+function drawMinimap() {
+  const mc = document.getElementById('minimap');
+  const mctx = mc.getContext('2d');
+  const mw = mc.width, mh = mc.height;
+  const sx = MAP_W / mw, sy = MAP_H / mh;
+
+  const imageData = mctx.createImageData(mw, mh);
+  const d = imageData.data;
+
+  for (let my = 0; my < mh; my++) {
+    for (let mx = 0; mx < mw; mx++) {
+      const tx = Math.floor(mx * sx), ty = Math.floor(my * sy);
+      const t = map[ty]?.[tx] ?? 0;
+      const c = TILE_COLORS[t]?.[0] || '#000';
+      const idx = (my * mw + mx) * 4;
+      d[idx] = parseInt(c.slice(1,3), 16);
+      d[idx+1] = parseInt(c.slice(3,5), 16);
+      d[idx+2] = parseInt(c.slice(5,7), 16);
+      d[idx+3] = 255;
+    }
+  }
+  mctx.putImageData(imageData, 0, 0);
+
+  const vx1 = camX / (MAP_W * TILE) * mw;
+  const vy1 = camY / (MAP_H * TILE) * mh;
+  const vw = (W / zoom) / (MAP_W * TILE) * mw;
+  const vh = (H / zoom) / (MAP_H * TILE) * mh;
+  mctx.strokeStyle = '#fff';
+  mctx.lineWidth = 1;
+  mctx.strokeRect(vx1, vy1, vw, vh);
+
+  kingdoms.forEach(k => {
+    mctx.fillStyle = k.color;
+    mctx.fillRect(k.capitalX / MAP_W * mw - 1, k.capitalY / MAP_H * mh - 1, 3, 3);
+  });
+}
+
+function updateStats() {
+  const pop = creatures.filter(c => c.type === 'person').length;
+  const anim = creatures.filter(c => c.type !== 'person').length;
+  document.getElementById('statPop').textContent = pop;
+  document.getElementById('statKing').textContent = kingdoms.filter((k,i) => creatures.some(c => c.type==='person' && c.kingdom===i)).length;
+  document.getElementById('statBuild').textContent = buildings.length;
+  document.getElementById('statAnim').textContent = anim;
+  document.getElementById('statYear').textContent = year;
+
+  if (kingdomPanelVisible) {
+    const list = document.getElementById('kingdomList');
+    list.innerHTML = '';
+    kingdoms.forEach((k, i) => {
+      const pop = creatures.filter(c => c.type === 'person' && c.kingdom === i).length;
+      if (pop === 0) return;
+      const builds = buildings.filter(b => b.kingdom === i).length;
+      const div = document.createElement('div');
+      div.className = 'kingdom-entry';
+      div.style.borderLeftColor = k.color;
+      div.innerHTML = `<div class="k-name" style="color:${k.color}">${k.name}</div>
+        <div class="k-pop">${k.race} · Pop: ${pop} · 🏠 ${builds}</div>
+        <div class="k-pop">${k.atWar.length > 0 ? '⚔️ At war' : '☮️ Peace'}</div>`;
+      list.appendChild(div);
+    });
+  }
+}
+
+// ============ GAME LOOP ============
+let lastStatsUpdate = 0;
+function gameLoop() {
+  simulate();
+  render();
+  if (Date.now() - lastStatsUpdate > 500) { updateStats(); lastStatsUpdate = Date.now(); }
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
+
+// Click on minimap to navigate
+document.getElementById('minimap').addEventListener('click', e => {
+  const rect = e.target.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  camX = (mx / 140) * MAP_W * TILE - W / zoom / 2;
+  camY = (my / 100) * MAP_H * TILE - H / zoom / 2;
+});
+
+// Keyboard shortcuts
+window.addEventListener('keydown', e => {
+  if (e.key === ' ') { setSpeed(gameSpeed === 0 ? 1 : 0); e.preventDefault(); }
+  if (e.key === '1') setSpeed(1);
+  if (e.key === '2') setSpeed(2);
+  if (e.key === '3') setSpeed(3);
+  if (e.key === 'g') toggleGrid();
+});
+</script>
+</body>
+</html>
